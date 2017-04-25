@@ -1,0 +1,6 @@
+ <script src="./sweetalert-master/dist/sweetalert-dev.js"></script>
+ <link rel="stylesheet" href="./sweetalert-master/dist/sweetalert.css">
+
+
+
+//ºô¯¸°Ï:http://t4t5.github.io/sweetalert/

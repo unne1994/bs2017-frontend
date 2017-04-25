@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>路外停車資訊 lite</title>
+  <!-- Bootstrap core CSS -->
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Custom styles for this template -->
+  <link href="stylesheets/dashboard.css" rel="stylesheet">
+</head>
+
+<style>
+.QQ{
+
+  font-size: 40px;
+
+}
+      #map {
+        height: 50%;
+      }
+
+       html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+</style>
+<body>
+
+  <div id="map"></div>
+
+
+
+        <h2>路外停車資訊 <span class="label label-info">lite</span></h2>
+
+        <div class="row">
+
+          <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+            <div id="areas" class="btn-group-vertical btn-block ">
+              <!--區域-->
+            </div>
+          </div>
+
+
+          <div class="col-xs-10 col-sm-10 col-md-10 col-lg-10">
+            
+            <div id="parkingLots" class="row ">
+              <!--停車場-->
+            </div>
+
+          </div>
+
+        </div>
+
+
+   <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+  <script src="http://ajax.microsoft.com/ajax/jquery.templates/beta1/jquery.tmpl.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  <script src="http://linzap.github.io/waterfall/waterfall-light.js"></script>
+
+
+
+    <script id="parkingLot-tmpl" type="text/x-jquery-tmpl">
+  <div class="parkingLot">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+          <h3 class="panel-title">${parkName}</h3>
+      </div>
+      <div class="panel-body">
+        <p>${introduction}</p>
+          <p>${payGuide}</p>
+        <a class="address" href="https://www.google.com.tw/maps/?q=${wgsY},${wgsX}" target="_blank">${address}></a>
+      </div>
+    </div>
+    
+  </div>
+  </script>
+
+
+    <script>
+      var a=[];
+ $(function () {
+        var $areas = $("#areas"),
+            $parkingLots = $("#parkingLots");
+  
+            
+         
+
+        // 利用 AJAX 取得區域資料
+       $.ajax({
+         type:"GET",
+         url:"http://buildschool-chu.azurewebsites.net/parking/areas",
+         data:null,
+         dataType:"jsonp",
+         success:function(result,status,xhr)
+         {
+           $areas.empty();
+           $parkingLots.empty();
+
+           $(result).each(function (i,areaName)
+           {
+             $("<a></a>")
+             .attr("href","#")
+             .data("area",areaName)
+             .text(areaName)
+             .addClass("btn QQ")
+              .addClass("btn-default")
+              .appendTo($areas);
+           });
+                  setTimeout(function(){
+                    $areas
+                    .find(".parkingLot")
+                    .show();
+                    $areas
+                    .waterfall();
+
+                },200)
+
+         }
+       });
+
+      $areas.on("click","a.btn",function(event)
+      {
+
+         var $a=$(this),
+
+             areaNamed=$a.data("area");
+              $a.addClass("btn-primary")            // 點擊的按鈕變色
+              .siblings("a.btn-primary")          // 尋找到之前被點擊變色的按鈕
+              .removeClass("btn-primary");        // 恢復原狀態(不變色)
+
+              $parkingLots.empty();
+
+              $.ajax({
+                 type:"GET",
+                 url:"http://buildschool-chu.azurewebsites.net/parking/index",
+                data: { "area": areaNamed },
+                 dataType:"jsonp",
+                 success:function(result,status,xhr)
+                 {
+                   
+                   $(result).each(function(i,item)
+                   {
+                      $("#parkingLot-tmpl")
+                    // 樣板套用來源資料
+                    .tmpl(item)
+                    // 寄放資料
+                    .data("json", item)
+                    .hide()
+                    .appendTo($parkingLots);
+          
+                    //alert (item.wgsY + "," + item.wgsX);
+                     //  var z=item.wgsY + "," + item.wgsX;
+                      // {lat:  24.959, lng: 121.2985}
+                       var z=item.wgsY
+                       var zz=item.wgsX
+                       a.push({"lat":item.wgsY,"lng":item.wgsX});
+                      // alert (a[0].lat);
+
+                   });
+                   initMap()
+
+                    setTimeout(function(){
+                    $parkingLots
+                    .find(".parkingLot")
+                    .show();
+                    $parkingLots
+                    .waterfall();
+
+                },200)
+                 }
+
+
+
+              });
+
+ return false;
+      });
+
+  $parkingLots.on("click","a.address",function(event){
+    var $a=$(this),
+
+    $parkingLot=$a.parents(".parkingLot"),
+    parkingLot=$parkingLot.data("json");
+
+         
+
+    $("#parkingLotMap").remove();
+    
+    $("<iframe></iframe>")
+    .attr("id","parkingLotMap")
+    .attr("width","100%")
+    .attr("height",300)
+    .attr("frameBorder",0)
+    .attr("src","https://www.google.com/maps/embed/v1/place?key=AIzaSyBJADoRetu48862wwZAykrCrUmO3gOGI90&q=" + parkingLot.wgsY + "," + parkingLot.wgsX)
+    .prependTo($parkingLots);
+
+    return false;
+  });
+
+   });
+
+
+
+
+ function initMap() {
+
+        var map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 7,
+          center: {lat: 23.6397624, lng: 121.4671615}
+        });
+
+        // Create an array of alphabetical characters used to label the markers.
+        //創建用於標記標記的字母字符數組。
+        var labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+        // Add some markers to the map.
+        // Note: The code uses the JavaScript Array.prototype.map() method to
+        // create an array of markers based on a given "locations" array.
+        // The map() method here has nothing to do with the Google Maps API.
+        //向地圖添加一些標記。
+         //注意：代碼使用JavaScript Array.prototype.map（）方法
+         //根據給定的“位置”數組創建一個標記數組。
+         //這裡的map（）方法與Google Maps API無關。
+        var markers = a.map(function(location, i) {
+
+          return new google.maps.Marker({
+          
+            position: location,
+            label: labels[i % labels.length]
+          });
+        });
+
+        // Add a marker clusterer to manage the markers.
+        //添加一個marker clusterer來管理標記。
+        var markerCluster = new MarkerClusterer(map, markers,
+            {imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m'});
+
+        a=[];
+
+
+
+            var infoWindow = new google.maps.InfoWindow({map: map});
+
+        // Try HTML5 geolocation.
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(function(position) {
+            var pos = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            };
+
+            infoWindow.setPosition(pos);
+            infoWindow.setContent('Location found.');
+            
+            map.setCenter(pos);
+          }, function() {
+            handleLocationError(true, infoWindow, map.getCenter());
+          });
+        } else {
+          // Browser doesn't support Geolocation
+          handleLocationError(false, infoWindow, map.getCenter());
+        }
+      }
+
+        function handleLocationError(browserHasGeolocation, infoWindow, pos) {
+        infoWindow.setPosition(pos);
+        infoWindow.setContent(browserHasGeolocation ?
+                              'Error: The Geolocation service failed.' :
+                              'Error: Your browser doesn\'t support geolocation.');
+      }
+
+
+     // alert (a[0].lat);
+    </script>
+    <script src="https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/markerclusterer.js">
+    </script>
+    <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBJADoRetu48862wwZAykrCrUmO3gOGI90&callback=initMap">
+    
+
+    </script>
+</body>
+
+</html>
